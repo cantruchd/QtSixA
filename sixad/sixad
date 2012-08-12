@@ -5,14 +5,14 @@
 
 DEBUG=0
 LEGACY=0
-
 . /etc/default/sixad
-
 if [ -f /usr/bin/sudo ]; then
   SUDO="/usr/bin/sudo"
 else
   SUDO=""
 fi
+
+# start function definitions ###################################################
 
 bt_device_check () {
   if (which hciconfig > /dev/null); then
@@ -35,14 +35,19 @@ bt_device_check () {
   fi
 }
 
+# If sixad-bin process exists, return success; else, return failure.
 sixad_running_check () {
   ps -e | grep sixad-bin > /dev/null
 }
 
+# If bluetoothd process exists, return success; else, return failure.
 bluetoothd_running_check () {
   ps -e | grep bluetoothd > /dev/null
 }
 
+# Check for root access. If root access, return success; else, return failure.
+# Also, attempt to load kernel module uinput ("User level driver support for
+# input subsystem").
 modprobe_check () {
   $SUDO /sbin/modprobe uinput
 }
@@ -50,7 +55,7 @@ modprobe_check () {
 bt_start () {
   $SUDO rm -f /tmp/.sixad-dbus-blocker.pid
   env sleep 1
-  
+
   if [ -f /lib/udev/rules.d/97-bluetooth.rules ]; then
     $SUDO /usr/sbin/bluetoothd --udev
   elif [ -f /etc/rc.d/bluetooth ]; then
@@ -62,11 +67,14 @@ bt_start () {
 
 bt_stop() {
   if (bluetoothd_running_check); then
+    # why pkill? why not use rc.d or init.d --stop?
     $SUDO pkill -KILL bluetoothd
   fi
-  
+
   $SUDO /usr/sbin/sixad-dbus-blocker &
 }
+
+# end function definitions #####################################################
 
 case $1 in
 
@@ -77,12 +85,12 @@ case $1 in
       echo "sixad is already running."
       echo "run '$0 --stop' to stop it"
     else
-     if (modprobe_check); then  #Check for root access before running, If NO access, quit
-      bt_stop
-      $SUDO /usr/sbin/sixad-bin $DEBUG $LEGACY $REMOTE
-     else
-      echo "You need admin/root access to run this application"
-     fi
+      if (modprobe_check); then
+        bt_stop
+        $SUDO /usr/sbin/sixad-bin $DEBUG $LEGACY $REMOTE
+      else
+        echo "You need admin/root access to run this application"
+      fi
     fi
     ;;
 
@@ -96,7 +104,7 @@ case $1 in
   --remote|-remote|remote)
     REMOTE=1
     bt_device_check
-    if (modprobe_check); then  #Check for root access before running, If NO access, quit
+    if (modprobe_check); then
       bt_stop
       $SUDO /usr/sbin/sixad-bin $DEBUG $LEGACY $REMOTE
     else
