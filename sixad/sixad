@@ -14,6 +14,8 @@ fi
 
 # start function definitions ###################################################
 
+# Check for existence of bluetooth adapter. If found, return success; otherwise,
+# exit. If bluetooth adapter hardware is old, print a warning.
 bt_device_check () {
   if (which hciconfig > /dev/null); then
     if (hciconfig dev > /dev/null); then
@@ -65,7 +67,7 @@ bt_start () {
   fi
 }
 
-bt_stop() {
+bt_stop () {
   if (bluetoothd_running_check); then
     # why pkill? why not use rc.d or init.d --stop?
     $SUDO pkill -KILL bluetoothd
